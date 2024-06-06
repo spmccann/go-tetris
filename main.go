@@ -2,31 +2,66 @@ package main
 
 import (
 	"fmt"
-	//"github.com/eiannone/keyboard"
+	"github.com/eiannone/keyboard"
 	"slices"
 	"strings"
 	"time"
 	"math/rand/v2"
-
-	
 )
 
+var needBlock bool = false
+
 func main() {
+	// Channel to receive key presses
+	keyPresses := make(chan keyboard.Key)
+
+	// Goroutine to listen for keyboard input
+	go func() {
+		defer close(keyPresses)
+		for {
+			_, key, err := keyboard.GetSingleKey()
+			if err != nil {
+				fmt.Println("Error reading key:", err)
+				return
+			}
+			keyPresses <- key
+		}
+	}()
 	tetrominos := tetrominos() 
 	db := board(22, 12, tetrominos)
 	fmt.Println(printBoard((db)))	
 	randomBlock := rand.IntN(7)
 	newGame := true
-	for {
+	runGame := true
+	for runGame {
 		newRandomNumber := rand.IntN(7)
-		if newGame || tetrominoPlaced(db, *tetrominos[randomBlock], newRandomNumber) {
+		if newGame || needBlock {
 			randomBlock = newRandomNumber
 			dropTetromino(*tetrominos[randomBlock], db, 2, 6)
 			newGame = false
-		}  
+			needBlock = false
+		}  else {
+			tetrominoPlaced(db, *tetrominos[randomBlock], newRandomNumber)
+			// Check for key press (non-blocking)
+			select {
+			case key := <-keyPresses:
+				fmt.Printf("You pressed: %q\r\n", key)
+				if key == keyboard.KeyEsc {
+					runGame = false
+				}
+				if key == keyboard.KeyArrowLeft {
+					fmt.Println("Block goes left")
+					dest := nextLocations(db)
+					moveBlockLeft(dest,*tetrominos[randomBlock], db)
+				}
+				// Handle key press based on the received key (e.g., move the Tetromino)
+			default:
+				// No key pressed, continue with game loop
+		}
+		}
 		fmt.Print("\033[H\033[2J")
 		fmt.Println(printBoard((db)))
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(300 * time.Millisecond)
 	}
 }
 
@@ -63,18 +98,17 @@ func findActives(db[][]*cell) [][]int{
 	return actives
 }
 
-func tetrominoPlaced(db[][]*cell, piece tetromino, _ int) bool{
+func tetrominoPlaced(db[][]*cell, piece tetromino, _ int) {
 	dest := nextLocations(db)
 	dest = dest[len(dest)-4:]
 	if isFloor(db) || isOccupancy(db) {
 		setOccupied(db)
 		setInactive(db, piece)
-		return true
+		needBlock = true
 	} else {
 		setInactive(db, piece)
 		insertBlock(dest, piece, db)
 	}
-	return false
 }
 
 func isOccupancy(db [][]*cell) bool {
@@ -118,6 +152,16 @@ func insertBlock(dest [][]int, piece tetromino, db[][]*cell) {
 	for loc:=0; loc<len(dest); loc++ {
 		x_val := dest[loc][0]
 		y_val := dest[loc][1]
+		db[x_val][y_val].block = piece.block
+		db[x_val][y_val].active = true
+	}
+}
+
+
+func moveBlockLeft(dest [][]int, piece tetromino, db[][]*cell) {
+	for loc:=0; loc<len(dest); loc++ {
+		x_val := dest[loc][0]
+		y_val := dest[loc][1] - 1
 		db[x_val][y_val].block = piece.block
 		db[x_val][y_val].active = true
 	}
