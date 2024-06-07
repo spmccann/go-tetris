@@ -10,12 +10,34 @@ import (
 )
 
 var needBlock bool = false
+var runGame bool = true
 
 func main() {
-	// Channel to receive key presses
-	keyPresses := make(chan keyboard.Key)
+	keyPresses := keyboardChannel()
+	tetrominos := tetrominos() 
+	db := board(22, 12, tetrominos)
+	fmt.Println(printBoard((db)))	
+	randomBlock := rand.IntN(7)
+	newGame := true
+	
+	for runGame {
+		newRandomNumber := rand.IntN(7)
+		if newGame || needBlock {
+			randomBlock = newRandomNumber
+			dropTetromino(*tetrominos[randomBlock], db, 2, 6)
+			newGame = false
+			needBlock = false
+		} else {
+			tetrominoPlaced(db, *tetrominos[randomBlock], newRandomNumber, keyPresses)
+		}
+		fmt.Print("\033[H\033[2J")
+		fmt.Println(printBoard((db)))
+		time.Sleep(400 * time.Millisecond)
+	}
+}
 
-	// Goroutine to listen for keyboard input
+func keyboardChannel() chan keyboard.Key{
+	keyPresses := make(chan keyboard.Key)
 	go func() {
 		defer close(keyPresses)
 		for {
@@ -27,43 +49,35 @@ func main() {
 			keyPresses <- key
 		}
 	}()
-	tetrominos := tetrominos() 
-	db := board(22, 12, tetrominos)
-	fmt.Println(printBoard((db)))	
-	randomBlock := rand.IntN(7)
-	newGame := true
-	runGame := true
-	for runGame {
-		newRandomNumber := rand.IntN(7)
-		if newGame || needBlock {
-			randomBlock = newRandomNumber
-			dropTetromino(*tetrominos[randomBlock], db, 2, 6)
-			newGame = false
-			needBlock = false
-		}  else {
-			tetrominoPlaced(db, *tetrominos[randomBlock], newRandomNumber)
-			// Check for key press (non-blocking)
-			select {
-			case key := <-keyPresses:
-				fmt.Printf("You pressed: %q\r\n", key)
-				if key == keyboard.KeyEsc {
-					runGame = false
-				}
-				if key == keyboard.KeyArrowLeft {
-					fmt.Println("Block goes left")
-					dest := nextLocations(db)
-					moveBlockLeft(dest,*tetrominos[randomBlock], db)
-				}
-				// Handle key press based on the received key (e.g., move the Tetromino)
-			default:
-				// No key pressed, continue with game loop
-		}
-		}
-		fmt.Print("\033[H\033[2J")
-		fmt.Println(printBoard((db)))
-		time.Sleep(300 * time.Millisecond)
-	}
+	return keyPresses
 }
+
+func readKeyboard(keyPresses chan keyboard.Key, db [][]*cell, piece tetromino, dest [][]int) {
+	// Check for key press (non-blocking)
+	select {
+	case key := <-keyPresses:
+		fmt.Printf("You pressed: %q\r\n", key)
+		if key == keyboard.KeyEsc {
+			runGame = false
+		}
+		if key == keyboard.KeyArrowLeft {
+			fmt.Println("Block goes left")
+			insertBlock(dest, piece, db, 0, -1)
+		}
+		if key == keyboard.KeyArrowRight {
+			fmt.Println("Block goes right")
+			insertBlock(dest, piece, db, 0, 1)
+		}
+		if key == keyboard.KeyArrowUp {
+			fmt.Println("Block rotates")
+			rotateBlock(dest, piece, db)
+		}
+	default:
+		insertBlock(dest, piece, db, 0, 0)
+		// No key pressed, continue with game loop
+	}
+} 
+
 
 func tetrominos() []*tetromino {
 	tetrominos := []*tetromino {
@@ -98,16 +112,16 @@ func findActives(db[][]*cell) [][]int{
 	return actives
 }
 
-func tetrominoPlaced(db[][]*cell, piece tetromino, _ int) {
+func tetrominoPlaced(db[][]*cell, piece tetromino, _ int, keyPresses chan keyboard.Key) {
 	dest := nextLocations(db)
-	dest = dest[len(dest)-4:]
+	//dest = dest[len(dest)-4:]
 	if isFloor(db) || isOccupancy(db) {
 		setOccupied(db)
 		setInactive(db, piece)
 		needBlock = true
 	} else {
 		setInactive(db, piece)
-		insertBlock(dest, piece, db)
+		readKeyboard(keyPresses, db, piece, dest)
 	}
 }
 
@@ -148,23 +162,36 @@ func nextLocations(db [][]*cell) [][]int{
 	return dest
 }
 
-func insertBlock(dest [][]int, piece tetromino, db[][]*cell) {
+func insertBlock(dest [][]int, piece tetromino, db[][]*cell, xValMod int, yValMod int) {
+	var x_val int
+	var y_val int
+	obCounter := 0
 	for loc:=0; loc<len(dest); loc++ {
-		x_val := dest[loc][0]
-		y_val := dest[loc][1]
+		y_val = dest[loc][1] + yValMod
+		if y_val < 1 {
+			obCounter = 1
+		}
+		if y_val > 10 {
+			obCounter = -1
+		}
+	}	
+	for loc:=0; loc<len(dest); loc++ {
+		x_val = dest[loc][0] + xValMod
+		y_val = dest[loc][1] + yValMod + obCounter
 		db[x_val][y_val].block = piece.block
 		db[x_val][y_val].active = true
 	}
 }
 
-
-func moveBlockLeft(dest [][]int, piece tetromino, db[][]*cell) {
-	for loc:=0; loc<len(dest); loc++ {
-		x_val := dest[loc][0]
-		y_val := dest[loc][1] - 1
-		db[x_val][y_val].block = piece.block
-		db[x_val][y_val].active = true
-	}
+func rotateBlock(dest [][]int, piece tetromino, db[][]*cell) {
+	for c:=0; c<len(piece.coords); c++ {
+		for loc:=0; loc<len(dest); loc++ {
+			x_val := dest[loc][0] - piece.coords[c][1]
+			y_val := dest[loc][1] - piece.coords[c][0]
+			db[x_val][y_val].block = piece.block
+			db[x_val][y_val].active = true
+		}
+	}	
 }
 
 func isFloor(db [][]*cell) bool {
