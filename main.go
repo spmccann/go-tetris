@@ -72,6 +72,10 @@ func readKeyboard(keyPresses chan keyboard.Key, db [][]*cell, piece tetromino, d
 			fmt.Println("Block rotates")
 			rotateBlock(dest, piece, db)
 		}
+		if key == keyboard.KeySpace {
+			fmt.Println("Block hard drops")
+			hardDrop(dest, piece, db)
+		}
 	default:
 		insertBlock(dest, piece, db, 0, 0)
 		// No key pressed, continue with game loop
@@ -165,7 +169,7 @@ func nextLocations(db [][]*cell) [][]int{
 func insertBlock(dest [][]int, piece tetromino, db[][]*cell, xValMod int, yValMod int) {
 	var x_val int
 	var y_val int
-	obCounter := 0
+	obCounter := 0 //resets block coordinate values if user input would push them off the left or right side of board
 	for loc:=0; loc<len(dest); loc++ {
 		y_val = dest[loc][1] + yValMod
 		if y_val < 1 {
@@ -192,6 +196,22 @@ func rotateBlock(dest [][]int, piece tetromino, db[][]*cell) {
 			db[x_val][y_val].active = true
 		}
 	}	
+}
+
+func hardDrop(dest [][]int, piece tetromino, db[][]*cell) {
+	// need to implement drop to block
+	high := 0
+	for loc:=0; loc<len(dest); loc++ {
+		if dest[loc][0] > high {
+			high = dest[loc][0]
+		}
+	}
+	for loc:=0; loc<len(dest); loc++ {
+		x_val := dest[loc][0] + (21 - high)
+		y_val := dest[loc][1]
+		db[x_val][y_val].block = piece.block
+		db[x_val][y_val].active = true
+	}
 }
 
 func isFloor(db [][]*cell) bool {
