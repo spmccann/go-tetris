@@ -15,7 +15,7 @@ var runGame bool = true
 func main() {
 	keyPresses := keyboardChannel()
 	tetrominos := tetrominos() 
-	db := board(22, 12, tetrominos)
+	db := board(26, 12, tetrominos)
 	fmt.Println(printBoard((db)))	
 	randomBlock := rand.IntN(7)
 	newGame := true
@@ -32,7 +32,7 @@ func main() {
 		}
 		fmt.Print("\033[H\033[2J")
 		fmt.Println(printBoard((db)))
-		time.Sleep(400 * time.Millisecond)
+		time.Sleep(300 * time.Millisecond)
 	}
 }
 
@@ -85,21 +85,21 @@ func readKeyboard(keyPresses chan keyboard.Key, db [][]*cell, piece tetromino, d
 
 func tetrominos() []*tetromino {
 	tetrominos := []*tetromino {
-		newTetromino("I", "🟦", [][]int{{0, -2}, {0, -1}, {0, 0}, {0, 1}}, "⬜"),
-		newTetromino("T", "🟪", [][]int{{1, 0}, {0, -1}, {0, 0}, {0, 1}}, "⬜"),
-		newTetromino("Z", "🟥", [][]int{{-1, -1}, {-1, 0}, {0, 0}, {0, 1}}, "⬜"),
-		newTetromino("S", "🟩", [][]int{{0, -1}, {-1, 0}, {0, 0}, {1, -1}}, "⬜"),
-		newTetromino("O", "🟨", [][]int{{0, -1}, {-1, -1}, {0, 0}, {-1, 0}}, "⬜"),
-		newTetromino("J", "🟫", [][]int{{1, 1}, {0, -1}, {0, 0}, {0, 1}}, "⬜"),
-		newTetromino("L", "🟧", [][]int{{-1, -1}, {0, -1}, {0, 0}, {0, 1}}, "⬜"),
-		newTetromino("Background", "⬛", nil,"⬜"),
+		newTetromino("I", "🟦", [][]int{{0, -2}, {0, -1}, {0, 0}, {0, 1}}, "⬜", "  "),
+		newTetromino("T", "🟪", [][]int{{1, 0}, {0, -1}, {0, 0}, {0, 1}}, "⬜", "  "),
+		newTetromino("Z", "🟥", [][]int{{-1, -1}, {-1, 0}, {0, 0}, {0, 1}}, "⬜", "  "),
+		newTetromino("S", "🟩", [][]int{{0, -1}, {-1, 0}, {0, 0}, {1, -1}}, "⬜", "  "),
+		newTetromino("O", "🟨", [][]int{{0, -1}, {-1, -1}, {0, 0}, {-1, 0}}, "⬜", "  "),
+		newTetromino("J", "🟫", [][]int{{1, 1}, {0, -1}, {0, 0}, {0, 1}}, "⬜", "  "),
+		newTetromino("L", "🟧", [][]int{{-1, -1}, {0, -1}, {0, 0}, {0, 1}}, "⬜", "  "),
+		newTetromino("Background", "⬛", nil,"⬜", "  "),
 	}
 	return tetrominos
 }
 
 func dropTetromino(piece tetromino, db [][]*cell, start_x int, start_y int) {
 	for i := 0; i < len(piece.coords); i++ {
-		db[start_x+piece.coords[i][0]][start_y+piece.coords[i][1]].block = piece.block
+		db[start_x+piece.coords[i][0]][start_y+piece.coords[i][1]].block = piece.invisible
 		db[start_x+piece.coords[i][0]][start_y+piece.coords[i][1]].active = true
 	}
 }
@@ -118,7 +118,10 @@ func findActives(db[][]*cell) [][]int{
 
 func tetrominoPlaced(db[][]*cell, piece tetromino, _ int, keyPresses chan keyboard.Key) {
 	dest := nextLocations(db)
-	//dest = dest[len(dest)-4:]
+	dest = dest[len(dest)-4:]
+	if isGameOver(dest, db) {
+		runGame = false
+	}
 	if isFloor(db) || isOccupancy(db) {
 		setOccupied(db)
 		setInactive(db, piece)
@@ -149,9 +152,17 @@ func setOccupied(db [][]*cell) {
 func setInactive(db [][]*cell, piece tetromino) {
 	actives := findActives(db)
 	for block:=0; block<len(actives); block++ {
-		db[actives[block][0]][actives[block][1]].active = false
-		if !db[actives[block][0]][actives[block][1]].occupied {
-			db[actives[block][0]][actives[block][1]].block = piece.reset
+		cell := db[actives[block][0]][actives[block][1]]
+		cell.active = false
+		if !cell.occupied {
+			if actives[block][0] > 4 {
+				cell.block = piece.reset
+			} else if actives[block][0] == 4{
+				cell.block = "⬛"
+			} else {
+				cell.block = piece.invisible
+			}
+			
 		}
 	}
 }
@@ -182,7 +193,13 @@ func insertBlock(dest [][]int, piece tetromino, db[][]*cell, xValMod int, yValMo
 	for loc:=0; loc<len(dest); loc++ {
 		x_val = dest[loc][0] + xValMod
 		y_val = dest[loc][1] + yValMod + obCounter
-		db[x_val][y_val].block = piece.block
+		if dest[loc][0] > 5 {
+			db[x_val][y_val].block = piece.block
+		} else if dest[loc][0] == 5{
+			db[x_val][y_val].block = "⬛"
+		} else {
+			db[x_val][y_val].block = piece.invisible
+		}
 		db[x_val][y_val].active = true
 	}
 }
@@ -207,15 +224,25 @@ func hardDrop(dest [][]int, piece tetromino, db[][]*cell) {
 		}
 	}
 	for loc:=0; loc<len(dest); loc++ {
-		x_val := dest[loc][0] + (21 - high)
+		x_val := dest[loc][0] + (25 - high)
 		y_val := dest[loc][1]
 		db[x_val][y_val].block = piece.block
 		db[x_val][y_val].active = true
 	}
 }
 
+func isGameOver(dest[][]int, db[][]*cell) bool {
+	for block:=0; block<len(dest); block++ {
+		fmt.Println(dest[block][0])
+		if dest[block][0] == 4 && db[dest[block][0]][dest[block][1]].occupied {
+			return true
+		}
+	}
+	return false
+}
+
 func isFloor(db [][]*cell) bool {
-	floor := 22
+	floor := 26
 	dest := nextLocations(db)
 	var rows []int
 	for block:=0; block<len(dest); block++ {
@@ -229,13 +256,15 @@ type tetromino struct {
 	block  string
 	coords [][]int
 	reset string
+	invisible string
 }
 
-func newTetromino(name string, block string, coords [][]int, reset string) *tetromino {
+func newTetromino(name string, block string, coords [][]int, reset string, invisible string) *tetromino {
 	t := tetromino{name: name}
 	t.block = block
 	t.coords = coords
 	t.reset = reset
+	t.invisible = invisible
 	return &t
 }
 
@@ -260,9 +289,19 @@ func board(height int, width int, tetrominos []*tetromino) [][]*cell {
 
 	for f := 0; f <= height; f++ {
 		// top and bottom border
-		if f == 0 || f == height {
+		if f == 0 || f == 1 || f == 2 || f == 3  {
 			for i := 0; i < width; i++ {
-				row = append(row, newCell([]int{f,i}, true, false, tetrominos[7].block))
+				if i == width - 1 {
+					row = append(row, newCell([]int{f,i}, false, false, tetrominos[7].invisible+"\n"))
+				} else {
+					row = append(row, newCell([]int{f,i}, false, false, tetrominos[7].invisible))
+				}
+			}
+			grid = append(grid, row)
+			row = nil
+		} else if f == 4 || f == height {
+			for i := 0; i < width; i++ {
+				row = append(row, newCell([]int{f,i}, false, false, tetrominos[7].block))
 			}
 			grid = append(grid, row)
 			row = nil
