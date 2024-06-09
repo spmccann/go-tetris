@@ -16,6 +16,7 @@ func main() {
 	keyPresses := keyboardChannel()
 	tetrominos := tetrominos()
 	db := board(26, 12, tetrominos)
+	logo()
 	fmt.Println(printBoard((db)))
 	randomBlock := rand.IntN(7)
 	newGame := true
@@ -31,6 +32,7 @@ func main() {
 			tetrominoPlaced(db, *tetrominos[randomBlock], newRandomNumber, keyPresses)
 		}
 		fmt.Print("\033[H\033[2J")
+		logo()
 		fmt.Println(printBoard((db)))
 		time.Sleep(300 * time.Millisecond)
 	}
@@ -117,7 +119,7 @@ func findActives(db [][]*cell) [][]int {
 
 func tetrominoPlaced(db [][]*cell, piece tetromino, _ int, keyPresses chan keyboard.Key) {
 	dest := nextLocations(db)
-	dest = dest[len(dest)-4:]
+	//dest = dest[len(dest)-4:]
 	if isGameOver(dest, db) {
 		runGame = false
 	}
@@ -139,6 +141,16 @@ func isOccupancy(db [][]*cell) bool {
 		}
 	}
 	return false
+}
+
+func isFloor(db [][]*cell) bool {
+	floor := 26
+	dest := nextLocations(db)
+	var rows []int
+	for block := 0; block < len(dest); block++ {
+		rows = append(rows, dest[block][0])
+	}
+	return slices.Max(rows) == floor
 }
 
 func setOccupied(db [][]*cell) {
@@ -177,21 +189,10 @@ func nextLocations(db [][]*cell) [][]int {
 }
 
 func insertBlock(dest [][]int, piece tetromino, db [][]*cell, xValMod int, yValMod int) {
-	var x_val int
-	var y_val int
-	obCounter := 0 //resets block coordinate values if user input would push them off the left or right side of board
+	obCounter := boundaries(dest, yValMod)
 	for loc := 0; loc < len(dest); loc++ {
-		y_val = dest[loc][1] + yValMod
-		if y_val < 1 {
-			obCounter = 1
-		}
-		if y_val > 10 {
-			obCounter = -1
-		}
-	}
-	for loc := 0; loc < len(dest); loc++ {
-		x_val = dest[loc][0] + xValMod
-		y_val = dest[loc][1] + yValMod + obCounter
+		x_val := dest[loc][0] + xValMod
+		y_val := dest[loc][1] + yValMod + obCounter
 		if dest[loc][0] > 5 {
 			db[x_val][y_val].block = piece.block
 		} else if dest[loc][0] == 5 {
@@ -201,6 +202,20 @@ func insertBlock(dest [][]int, piece tetromino, db [][]*cell, xValMod int, yValM
 		}
 		db[x_val][y_val].active = true
 	}
+}
+
+func boundaries(dest [][]int, yValMod int) int {
+	obCounter := 0 //resets block coordinate values if user input would push them off the left or right side of board
+	for loc := 0; loc < len(dest); loc++ {
+		y_val := dest[loc][1] + yValMod
+		if y_val < 1 {
+			obCounter = 1
+		}
+		if y_val > 10 {
+			obCounter = -1
+		}
+	}
+	return obCounter
 }
 
 func rotateBlock(dest [][]int, piece tetromino, db [][]*cell) {
@@ -215,39 +230,16 @@ func rotateBlock(dest [][]int, piece tetromino, db [][]*cell) {
 }
 
 func hardDrop(dest [][]int, piece tetromino, db [][]*cell) {
-	// need to implement drop to block
-	high := 0
-	for loc := 0; loc < len(dest); loc++ {
-		if dest[loc][0] > high {
-			high = dest[loc][0]
-		}
-	}
-	for loc := 0; loc < len(dest); loc++ {
-		x_val := dest[loc][0] + (25 - high)
-		y_val := dest[loc][1]
-		db[x_val][y_val].block = piece.block
-		db[x_val][y_val].active = true
-	}
+	// blahhhhh
 }
 
 func isGameOver(dest [][]int, db [][]*cell) bool {
 	for block := 0; block < len(dest); block++ {
-		fmt.Println(dest[block][0])
 		if dest[block][0] == 4 && db[dest[block][0]][dest[block][1]].occupied {
 			return true
 		}
 	}
 	return false
-}
-
-func isFloor(db [][]*cell) bool {
-	floor := 26
-	dest := nextLocations(db)
-	var rows []int
-	for block := 0; block < len(dest); block++ {
-		rows = append(rows, dest[block][0])
-	}
-	return slices.Max(rows) == floor
 }
 
 type tetromino struct {
@@ -322,13 +314,26 @@ func board(height int, width int, tetrominos []*tetromino) [][]*cell {
 
 func printBoard(board [][]*cell) string {
 	var sb strings.Builder
-	for j := 0; j < len(board); j++ {
+	for j := 4; j < len(board); j++ {
 		for i := 0; i < len(board[j]); i++ {
 			sb.WriteString(board[j][i].block)
 		}
 		sb.WriteString("\n")
 	}
 	return sb.String()
+}
+
+func logo() {
+	fmt.Print(`
+  _______   _        _     
+ |__   __| | |      (_)    
+    | | ___| |_ _ __ _ ___ 
+    | |/ _ \ __| '__| / __|
+    | |  __/ |_| |  | \__ \
+    |_|\___|\__|_|  |_|___/
+                           
+                           
+`)
 }
 
 /*
