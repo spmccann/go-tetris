@@ -13,7 +13,7 @@ var needBlock bool = false
 var runGame bool = true
 
 func main() {
-	
+
 	tetrominos := tetrominos()
 	db := board(26, 12, tetrominos)
 	logo()
@@ -36,7 +36,7 @@ func main() {
 			tetrominoPlaced(db, actives, *tetrominos[randomBlock], newRandomNumber, keyPresses)
 		}
 		fmt.Print("\033[H\033[2J")
-		logo() 
+		logo()
 		fmt.Println(printBoard((db)))
 		time.Sleep(300 * time.Millisecond)
 	}
@@ -75,6 +75,7 @@ func readKeyboard(keyPresses chan keyboard.Key, db [][]*cell, piece tetromino, d
 			rotateBlock(dest, piece, db)
 		}
 		if key == keyboard.KeySpace {
+			hardDrop()
 			insertBlock(dest, piece, db, 0, 0)
 		}
 	default:
@@ -83,15 +84,13 @@ func readKeyboard(keyPresses chan keyboard.Key, db [][]*cell, piece tetromino, d
 	}
 }
 
-
-func startGame(){
+func startGame() {
 	char, _, err := keyboard.GetSingleKey()
-	if (err != nil) {
-			panic(err)
+	if err != nil {
+		panic(err)
 	}
 	fmt.Printf("You pressed: %q\r\n", char)
 }
-
 
 func tetrominos() []*tetromino {
 	tetrominos := []*tetromino{
@@ -343,5 +342,3 @@ func logo() {
                            
 `)
 }
-
-
