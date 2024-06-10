@@ -18,12 +18,11 @@ func main() {
 	db := board(26, 12, tetrominos)
 	logo()
 	fmt.Println(printBoard((db)))
-	fmt.Println("Press Any Key to Play")
+	fmt.Println("  Press Any Key to Play")
 	startGame()
 	keyPresses := keyboardChannel()
 	randomBlock := rand.IntN(7)
 	newGame := true
-	
 
 	for runGame {
 		newRandomNumber := rand.IntN(7)
@@ -33,7 +32,8 @@ func main() {
 			newGame = false
 			needBlock = false
 		} else {
-			tetrominoPlaced(db, *tetrominos[randomBlock], newRandomNumber, keyPresses)
+			actives := findActives(db)
+			tetrominoPlaced(db, actives, *tetrominos[randomBlock], newRandomNumber, keyPresses)
 		}
 		fmt.Print("\033[H\033[2J")
 		logo() 
@@ -62,25 +62,20 @@ func readKeyboard(keyPresses chan keyboard.Key, db [][]*cell, piece tetromino, d
 	// Check for key press (non-blocking)
 	select {
 	case key := <-keyPresses:
-		fmt.Printf("You pressed: %q\r\n", key)
 		if key == keyboard.KeyEsc {
 			runGame = false
 		}
 		if key == keyboard.KeyArrowLeft {
-			fmt.Println("Block goes left")
 			insertBlock(dest, piece, db, 0, -1)
 		}
 		if key == keyboard.KeyArrowRight {
-			fmt.Println("Block goes right")
 			insertBlock(dest, piece, db, 0, 1)
 		}
 		if key == keyboard.KeyArrowUp {
-			fmt.Println("Block rotates")
 			rotateBlock(dest, piece, db)
 		}
 		if key == keyboard.KeySpace {
-			fmt.Println("Block hard drops")
-			hardDrop(dest, piece, db)
+			insertBlock(dest, piece, db, 0, 0)
 		}
 	default:
 		insertBlock(dest, piece, db, 0, 0)
@@ -131,24 +126,24 @@ func findActives(db [][]*cell) [][]int {
 	return actives
 }
 
-func tetrominoPlaced(db [][]*cell, piece tetromino, _ int, keyPresses chan keyboard.Key) {
-	dest := nextLocations(db)
+func tetrominoPlaced(db [][]*cell, actives [][]int, piece tetromino, _ int, keyPresses chan keyboard.Key) {
+	dest := nextLocations(actives)
 	//dest = dest[len(dest)-4:]
 	if isGameOver(dest, db) {
+		fmt.Println("Game Over")
 		runGame = false
 	}
-	if isFloor(db) || isOccupancy(db) {
+	if isFloor(dest) || isOccupancy(db, dest) {
 		setOccupied(db)
-		setInactive(db, piece)
+		setInactive(db, piece, actives)
 		needBlock = true
 	} else {
-		setInactive(db, piece)
+		setInactive(db, piece, actives)
 		readKeyboard(keyPresses, db, piece, dest)
 	}
 }
 
-func isOccupancy(db [][]*cell) bool {
-	dest := nextLocations(db)
+func isOccupancy(db [][]*cell, dest [][]int) bool {
 	for block := 0; block < len(dest); block++ {
 		if db[dest[block][0]][dest[block][1]].occupied {
 			return true
@@ -157,9 +152,8 @@ func isOccupancy(db [][]*cell) bool {
 	return false
 }
 
-func isFloor(db [][]*cell) bool {
+func isFloor(dest [][]int) bool {
 	floor := 26
-	dest := nextLocations(db)
 	var rows []int
 	for block := 0; block < len(dest); block++ {
 		rows = append(rows, dest[block][0])
@@ -174,8 +168,7 @@ func setOccupied(db [][]*cell) {
 	}
 }
 
-func setInactive(db [][]*cell, piece tetromino) {
-	actives := findActives(db)
+func setInactive(db [][]*cell, piece tetromino, actives [][]int) {
 	for block := 0; block < len(actives); block++ {
 		cell := db[actives[block][0]][actives[block][1]]
 		cell.active = false
@@ -192,8 +185,7 @@ func setInactive(db [][]*cell, piece tetromino) {
 	}
 }
 
-func nextLocations(db [][]*cell) [][]int {
-	actives := findActives(db)
+func nextLocations(actives [][]int) [][]int {
 	var dest [][]int
 	for block := 0; block < len(actives); block++ {
 		move := []int{actives[block][0] + 1, actives[block][1]}
@@ -243,8 +235,8 @@ func rotateBlock(dest [][]int, piece tetromino, db [][]*cell) {
 	}
 }
 
-func hardDrop(dest [][]int, piece tetromino, db [][]*cell) {
-	// blahhhhh
+func hardDrop() {
+	fmt.Println("gah")
 }
 
 func isGameOver(dest [][]int, db [][]*cell) bool {
@@ -328,7 +320,9 @@ func board(height int, width int, tetrominos []*tetromino) [][]*cell {
 
 func printBoard(board [][]*cell) string {
 	var sb strings.Builder
+	padding := "  "
 	for j := 4; j < len(board); j++ {
+		sb.WriteString(padding)
 		for i := 0; i < len(board[j]); i++ {
 			sb.WriteString(board[j][i].block)
 		}
