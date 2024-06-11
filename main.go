@@ -64,18 +64,15 @@ func readKeyboard(keyPresses chan keyboard.Key, db [][]*cell, piece tetromino, d
 	case key := <-keyPresses:
 		if key == keyboard.KeyEsc {
 			runGame = false
-		}
-		if key == keyboard.KeyArrowLeft {
+		} else if key == keyboard.KeyArrowLeft {
 			insertBlock(dest, piece, db, 0, -1)
-		}
-		if key == keyboard.KeyArrowRight {
+		} else if key == keyboard.KeyArrowRight {
 			insertBlock(dest, piece, db, 0, 1)
-		}
-		if key == keyboard.KeyArrowUp {
+		} else if key == keyboard.KeyArrowUp {
 			rotateBlock(dest, piece, db)
-		}
-		if key == keyboard.KeySpace {
-			hardDrop()
+		} else if key == keyboard.KeySpace {
+			hardDrop(dest, piece, db)
+		} else {
 			insertBlock(dest, piece, db, 0, 0)
 		}
 	default:
@@ -92,15 +89,52 @@ func startGame() {
 	fmt.Printf("You pressed: %q\r\n", char)
 }
 
+
+var orientations = map[string][][][]int{
+	"I": {
+			{{0, 0}, {1, 0}, {2, 0}, {3, 0}},
+			{{1, 0}, {1, 1}, {1, 2}, {1, 3}},
+	},
+	"O": {
+			{{0, 0}, {0, 1}, {1, 0}, {1, 1}},
+	},
+	"T": {
+			{{0, 1}, {1, 0}, {1, 1}, {1, 2}},
+			{{0, 1}, {1, 1}, {1, 2}, {2, 1}},
+			{{0, 0}, {0, 1}, {0, 2}, {1, 1}},
+			{{0, 1}, {1, 0}, {1, 1}, {2, 1}},
+	},
+	"S": {
+			{{0, 1}, {0, 2}, {1, 0}, {1, 1}},
+			{{0, 0}, {1, 0}, {1, 1}, {2, 1}},
+	},
+	"Z": {
+			{{0, 0}, {0, 1}, {1, 1}, {1, 2}},
+			{{0, 1}, {1, 0}, {1, 1}, {2, 0}},
+	},
+	"J": {
+			{{0, 0}, {1, 0}, {1, 1}, {1, 2}},
+			{{0, 1}, {1, 1}, {2, 0}, {2, 1}},
+			{{0, 0}, {0, 1}, {0, 2}, {1, 2}},
+			{{0, 0}, {0, 1}, {1, 0}, {2, 0}},
+	},
+	"L": {
+			{{0, 2}, {1, 0}, {1, 1}, {1, 2}},
+			{{0, 0}, {0, 1}, {1, 1}, {2, 1}},
+			{{0, 0}, {0, 1}, {0, 2}, {1, 0}},
+			{{0, 0}, {1, 0}, {2, 0}, {2, 1}},
+	},
+}
+
 func tetrominos() []*tetromino {
 	tetrominos := []*tetromino{
-		newTetromino("I", "🟦", [][]int{{0, -2}, {0, -1}, {0, 0}, {0, 1}}, "⬜", "  "),
-		newTetromino("T", "🟪", [][]int{{1, 0}, {0, -1}, {0, 0}, {0, 1}}, "⬜", "  "),
-		newTetromino("Z", "🟥", [][]int{{-1, -1}, {-1, 0}, {0, 0}, {0, 1}}, "⬜", "  "),
-		newTetromino("S", "🟩", [][]int{{0, -1}, {-1, 0}, {0, 0}, {1, -1}}, "⬜", "  "),
-		newTetromino("O", "🟨", [][]int{{0, -1}, {-1, -1}, {0, 0}, {-1, 0}}, "⬜", "  "),
-		newTetromino("J", "🟫", [][]int{{1, 1}, {0, -1}, {0, 0}, {0, 1}}, "⬜", "  "),
-		newTetromino("L", "🟧", [][]int{{-1, -1}, {0, -1}, {0, 0}, {0, 1}}, "⬜", "  "),
+		newTetromino("I", "🟦", orientations["I"][0], "⬜", "  "),
+		newTetromino("T", "🟪", orientations["T"][0], "⬜", "  "),
+		newTetromino("Z", "🟥", orientations["Z"][0], "⬜", "  "),
+		newTetromino("S", "🟩", orientations["S"][0], "⬜", "  "),
+		newTetromino("O", "🟨", orientations["O"][0], "⬜", "  "),
+		newTetromino("J", "🟫", orientations["J"][0], "⬜", "  "),
+		newTetromino("L", "🟧", orientations["L"][0], "⬜", "  "),
 		newTetromino("Background", "⬛", nil, "⬜", "  "),
 	}
 	return tetrominos
@@ -179,7 +213,6 @@ func setInactive(db [][]*cell, piece tetromino, actives [][]int) {
 			} else {
 				cell.block = piece.invisible
 			}
-
 		}
 	}
 }
@@ -223,19 +256,45 @@ func boundaries(dest [][]int, yValMod int) int {
 	return obCounter
 }
 
+// func rotateBlock(dest [][]int, piece tetromino, db [][]*cell) {
+// 	cords := piece.coords
+// 	var new_cords [][]int 
+// 	for cord := 0; cord<len(cords); cord++ {
+// 		new_x := cords[cord][1] * -1
+// 		new_y := cords[cord][0]
+// 		new_cords = append(new_cords, []int{new_x, new_y})
+// 	}
+// 	for loc := 0; loc < len(dest); loc++ {
+		
+// 		x_val := dest[loc][0]
+// 		y_val := dest[loc][1]
+// 		db[x_val][y_val].block = piece.reset
+// 		db[x_val][y_val].active = false
+// 		db[x_val + new_cords[loc][0]][y_val + new_cords[loc][1]].block = piece.block
+// 		db[x_val + new_cords[loc][0]][y_val + new_cords[loc][1]].active = true
+// 	}
+// }
+
+
 func rotateBlock(dest [][]int, piece tetromino, db [][]*cell) {
-	for c := 0; c < len(piece.coords); c++ {
-		for loc := 0; loc < len(dest); loc++ {
-			x_val := dest[loc][0] - piece.coords[c][1]
-			y_val := dest[loc][1] - piece.coords[c][0]
-			db[x_val][y_val].block = piece.block
-			db[x_val][y_val].active = true
-		}
-	}
+  originalCoords := piece.coords
+  rotatedCoords := make([][]int, len(originalCoords))
+  for i := range originalCoords {
+    rotatedCoords[i] = []int{-originalCoords[i][1], originalCoords[i][0]} // Apply rotation formula
+  }
+
+  for i := range originalCoords {
+    x := dest[i][0]
+    y := dest[i][1]
+    db[x][y].block = piece.reset
+    db[x][y].active = false
+    db[x + rotatedCoords[i][0]][y + rotatedCoords[i][1]].block = piece.block
+    db[x + rotatedCoords[i][0]][y + rotatedCoords[i][1]].active = true
+  
+  }
 }
 
-func hardDrop() {
-	fmt.Println("gah")
+func hardDrop(dest [][]int, piece tetromino, db [][]*cell) {
 }
 
 func isGameOver(dest [][]int, db [][]*cell) bool {
