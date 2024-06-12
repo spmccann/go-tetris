@@ -37,6 +37,7 @@ func main() {
 			actives := findActives(db)
 			tetrominoPlaced(db, actives, *tetrominos[randomBlock], newRandomNumber, keyPresses)
 		}
+		completedLines(db)
 		fmt.Print("\033[H\033[2J")
 		logo()
 		fmt.Println(printBoard((db)))
@@ -299,6 +300,23 @@ func hardDrop(dest [][]int, piece tetromino, db [][]*cell) {
 		setInactive(db, piece, actives)
 		db[dest[i][0]+floor-high][dest[i][1]].block = piece.block
 		db[dest[i][0]+floor-high][dest[i][1]].active = false
+	}
+}
+
+func completedLines(db [][]*cell) {
+	total := 0
+	for line := range db {
+		for cell := range db[line] {
+			if db[line][cell].occupied {
+				total += 1
+			}
+		}
+		if total == 12 {
+			fmt.Println(total, "complete line")
+		} else {
+			fmt.Println(total, "not complete")
+		}
+		total = 0
 	}
 }
 
