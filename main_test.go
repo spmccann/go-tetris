@@ -5,5 +5,5 @@ import (
 )
 
 func TestIsFloor(t *testing.T) {
-	
+
 }
