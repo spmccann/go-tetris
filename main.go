@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/eiannone/keyboard"
 	"math/rand/v2"
 	"os"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/eiannone/keyboard"
 )
 
 var needBlock bool = false
@@ -240,27 +241,28 @@ func nextLocations(actives [][]int) [][]int {
 }
 
 func insertBlock(dest [][]int, piece tetromino, db [][]*cell, xValMod int, yValMod int) {
-	obCounter := boundaries(dest, yValMod)
+	sideHit := blockBoundaries(dest, yValMod, db)
 	for loc := 0; loc < len(dest); loc++ {
 		x_val := dest[loc][0] + xValMod
-		y_val := dest[loc][1] + yValMod + obCounter
+		y_val := dest[loc][1] + yValMod + sideHit
 		db[x_val][y_val].block = piece.block
 		db[x_val][y_val].active = true
 	}
 }
 
-func boundaries(dest [][]int, yValMod int) int {
-	obCounter := 0 //resets block coordinate values if user input would push them off the left or right side of board
+func blockBoundaries(dest [][]int, yValMod int, db [][]*cell) int {
+	sideHit := 0
 	for loc := 0; loc < len(dest); loc++ {
+		x_val := dest[loc][0]
 		y_val := dest[loc][1] + yValMod
-		if y_val < 1 {
-			obCounter = 1
+		if db[x_val][y_val].occupied && yValMod == -1 {
+			sideHit = 1
 		}
-		if y_val > 10 {
-			obCounter = -1
+		if db[x_val][y_val].occupied && yValMod == 1 {
+			sideHit = -1
 		}
 	}
-	return obCounter
+	return sideHit
 }
 
 func rotateBlock(dest [][]int, piece tetromino) [][]int {
@@ -278,7 +280,7 @@ func rotateBlock(dest [][]int, piece tetromino) [][]int {
 			rotPointY = y
 		}
 		if rotPointY+originalCoords[blockPos][i][1] > 11 {
-			avoidOBY = rotPointY + originalCoords[blockPos][i][1] - 11
+			avoidOBY = rotPointY + originalCoords[blockPos][i][1] - 8
 		}
 		if rotPointX+originalCoords[blockPos][i][0] > 25 {
 			avoidOBX = rotPointX + originalCoords[blockPos][i][0] - 25
@@ -335,7 +337,7 @@ func completedLines(db [][]*cell, piece tetromino) {
 				db[line][cell].occupied = false
 				db[line][cell].block = piece.reset
 			}
-			//moveBlocksDown(db, piece)
+			moveBlocksDown(db, line)
 		}
 		total = 0
 		full = nil
@@ -343,18 +345,16 @@ func completedLines(db [][]*cell, piece tetromino) {
 
 }
 
-// func moveBlocksDown(db [][]*cell, piece tetromino) {
-// 	for line:=0; line<len(db)-1; line++ {
-// 		for cell:=1; cell<len(db[line])-1; cell++ {
-// 			if db[line][cell].occupied {
-// 				db[line+1][cell].block = piece.block
-// 				db[line+1][cell].occupied = true
-// 				db[line][cell].block = piece.reset
-// 				db[line][cell].occupied = false
-// 			}
-// 		}
-// 	}
-// }
+func moveBlocksDown(db [][]*cell, mark int) {
+	for line := 0; line < len(db)-1; line++ {
+		for cell := 1; cell < len(db[line])-1; cell++ {
+			if db[line][cell].occupied && line < mark {
+				db[line+1][cell].block = db[line][cell].block
+				db[line+1][cell].occupied = true
+			}
+		}
+	}
+}
 
 func isGameOver(dest [][]int, db [][]*cell) bool {
 	for block := 0; block < len(dest); block++ {
