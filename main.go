@@ -75,7 +75,8 @@ func readKeyboard(keyPresses chan keyboard.Key, db [][]*cell, piece tetromino, d
 			newDest := rotateBlock(dest, piece)
 			insertBlock(newDest, piece, db, 0, 0)
 		} else if key == keyboard.KeySpace {
-			hardDrop(dest, piece, db)
+			newDest := hardDrop(dest, db)
+			insertBlock(newDest, piece, db, 0, 0)
 		} else {
 			insertBlock(dest, piece, db, 0, 0)
 		}
@@ -182,7 +183,7 @@ func tetrominoPlaced(db [][]*cell, actives [][]int, piece tetromino, _ int, keyP
 	//dest = dest[len(dest)-4:]
 	if isGameOver(dest, db) {
 		fmt.Println("Game Over")
-		runGame = false
+		os.Exit(0)
 	}
 	if isFloor(dest) || isOccupancy(db, dest) {
 		setOccupied(db)
@@ -292,20 +293,31 @@ func rotateBlock(dest [][]int, piece tetromino) [][]int {
 	return newDest
 }
 
-func hardDrop(dest [][]int, piece tetromino, db [][]*cell) {
-	actives := findActives(db)
-	floor := 25
+func hardDrop(dest [][]int, db [][]*cell) [][]int {
+	var newDest [][]int
 	var rows []int
+	var columns []int
+	floor := 25
 	for block := 0; block < len(dest); block++ {
 		rows = append(rows, dest[block][0])
+		columns = append(columns, dest[block][1])
 	}
-	high := slices.Max(rows)
+	rowMax := slices.Max(rows)
+	colMin := slices.Min(columns)
+	colMax := slices.Max(columns)
+	for rows := rowMax; rows < len(db)-1; rows++ {
+		for cells := colMin; cells <= colMax; cells++ {
+			if db[rows][cells].occupied {
+				if db[rows][cells].location[0] < floor {
+					floor = db[rows][cells].location[0] - 1
+				}
+			}
+		}
+	}
 	for i := range dest {
-		setOccupied(db)
-		setInactive(db, piece, actives)
-		db[dest[i][0]+floor-high][dest[i][1]].block = piece.block
-		db[dest[i][0]+floor-high][dest[i][1]].active = false
+		newDest = append(newDest, []int{dest[i][0] + floor - rowMax, dest[i][1]})
 	}
+	return newDest
 }
 
 func completedLines(db [][]*cell, piece tetromino) {
@@ -346,7 +358,7 @@ func completedLines(db [][]*cell, piece tetromino) {
 
 func isGameOver(dest [][]int, db [][]*cell) bool {
 	for block := 0; block < len(dest); block++ {
-		if dest[block][0] == 4 && db[dest[block][0]][dest[block][1]].occupied {
+		if dest[block][0] == 6 && db[dest[block][0]][dest[block][1]].occupied {
 			return true
 		}
 	}
