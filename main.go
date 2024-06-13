@@ -37,7 +37,6 @@ func main() {
 			actives := findActives(db)
 			tetrominoPlaced(db, actives, *tetrominos[randomBlock], newRandomNumber, keyPresses)
 		}
-		completedLines(db)
 		fmt.Print("\033[H\033[2J")
 		logo()
 		fmt.Println(printBoard((db)))
@@ -153,7 +152,12 @@ func tetrominos() []*tetromino {
 }
 
 func dropTetromino(piece tetromino, db [][]*cell, start_x int, start_y int) {
-	pos := blockPos
+	var pos int
+	if blockPos < 3 {
+		pos = blockPos + 1
+	} else {
+		pos = 0
+	}
 	for i := 0; i < len(piece.coords[pos]); i++ {
 		db[start_x+piece.coords[pos][i][0]][start_y+piece.coords[pos][i][1]].block = piece.block
 		db[start_x+piece.coords[pos][i][0]][start_y+piece.coords[pos][i][1]].active = true
@@ -174,6 +178,7 @@ func findActives(db [][]*cell) [][]int {
 
 func tetrominoPlaced(db [][]*cell, actives [][]int, piece tetromino, _ int, keyPresses chan keyboard.Key) {
 	dest := nextLocations(actives)
+	completedLines(db, piece)
 	//dest = dest[len(dest)-4:]
 	if isGameOver(dest, db) {
 		fmt.Println("Game Over")
@@ -303,22 +308,41 @@ func hardDrop(dest [][]int, piece tetromino, db [][]*cell) {
 	}
 }
 
-func completedLines(db [][]*cell) {
-	total := 0
+func completedLines(db [][]*cell, piece tetromino) {
+	var full []int
+	var total int
 	for line := range db {
 		for cell := range db[line] {
 			if db[line][cell].occupied {
 				total += 1
+				full = append(full, cell)
 			}
 		}
 		if total == 12 {
-			fmt.Println(total, "complete line")
-		} else {
-			fmt.Println(total, "not complete")
+			for cell := 1; cell < len(full)-1; cell++ {
+				db[line][cell].occupied = false
+				db[line][cell].block = piece.reset
+			}
+			//moveBlocksDown(db, piece)
 		}
 		total = 0
+		full = nil
 	}
+
 }
+
+// func moveBlocksDown(db [][]*cell, piece tetromino) {
+// 	for line:=0; line<len(db)-1; line++ {
+// 		for cell:=1; cell<len(db[line])-1; cell++ {
+// 			if db[line][cell].occupied {
+// 				db[line+1][cell].block = piece.block
+// 				db[line+1][cell].occupied = true
+// 				db[line][cell].block = piece.reset
+// 				db[line][cell].occupied = false
+// 			}
+// 		}
+// 	}
+// }
 
 func isGameOver(dest [][]int, db [][]*cell) bool {
 	for block := 0; block < len(dest); block++ {
