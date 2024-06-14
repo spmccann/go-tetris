@@ -333,11 +333,11 @@ func completedLines(db [][]*cell, piece tetromino) {
 			}
 		}
 		if total == 12 {
-			for cell := 1; cell < len(full)-1; cell++ {
-				db[line][cell].occupied = false
-				db[line][cell].block = piece.reset
+			for cells := 1; cells < len(full)-1; cells++ {
+				db[line][cells].occupied = false
+				db[line][cells].block = piece.reset
 			}
-			moveBlocksDown(db, line)
+			moveBlocksDown(db, piece, line) 
 		}
 		total = 0
 		full = nil
@@ -345,12 +345,14 @@ func completedLines(db [][]*cell, piece tetromino) {
 
 }
 
-func moveBlocksDown(db [][]*cell, mark int) {
-	for line := 0; line < len(db)-1; line++ {
-		for cell := 1; cell < len(db[line])-1; cell++ {
-			if db[line][cell].occupied && line < mark {
-				db[line+1][cell].block = db[line][cell].block
-				db[line+1][cell].occupied = true
+func moveBlocksDown(db [][]*cell, piece tetromino, mark int) {
+	for line := mark; line >= len(db)-1; line-- {
+		for cell := 0 ; cell < len(db[line])+1; cell++ {
+			if db[line][cell].occupied {
+				db[line][cell].block = db[line -1][cell].block
+				db[line][cell].occupied = true
+				db[line - 1][cell].block = piece.reset
+				db[line - 1][cell].occupied = false
 			}
 		}
 	}
