@@ -279,11 +279,11 @@ func rotateBlock(dest [][]int, piece tetromino) [][]int {
 			rotPointX = x
 			rotPointY = y
 		}
-		if rotPointY+originalCoords[blockPos][i][1] > 11 {
-			avoidOBY = rotPointY + originalCoords[blockPos][i][1] - 8
+		if y > 11 {
+			avoidOBY = 1
 		}
-		if rotPointX+originalCoords[blockPos][i][0] > 25 {
-			avoidOBX = rotPointX + originalCoords[blockPos][i][0] - 25
+		if x > 25 {
+			avoidOBX = 1
 		}
 		newDest = append(newDest, []int{rotPointX + originalCoords[blockPos][i][0] - avoidOBX, rotPointY + originalCoords[blockPos][i][1] - avoidOBY})
 	}
@@ -323,36 +323,30 @@ func hardDrop(dest [][]int, db [][]*cell) [][]int {
 }
 
 func completedLines(db [][]*cell, piece tetromino) {
-	var full []int
 	var total int
 	for line := range db {
 		for cell := range db[line] {
 			if db[line][cell].occupied {
 				total += 1
-				full = append(full, cell)
 			}
 		}
 		if total == 12 {
-			for cells := 1; cells < len(full)-1; cells++ {
-				db[line][cells].occupied = false
-				db[line][cells].block = piece.reset
-			}
-			moveBlocksDown(db, piece, line) 
+			moveBlocksDown(db, line) 
 		}
 		total = 0
-		full = nil
 	}
 
 }
 
-func moveBlocksDown(db [][]*cell, piece tetromino, mark int) {
-	for line := mark; line >= len(db)-1; line-- {
-		for cell := 0 ; cell < len(db[line])+1; cell++ {
-			if db[line][cell].occupied {
-				db[line][cell].block = db[line -1][cell].block
-				db[line][cell].occupied = true
-				db[line - 1][cell].block = piece.reset
-				db[line - 1][cell].occupied = false
+func moveBlocksDown(db [][]*cell, mark int) {
+	source := db
+	destination := make([][]*cell, len(source))
+	copy(destination, source)
+
+	for line := 6; line < len(db)-1; line++ {
+		for cell := 1; cell < len(db[line])-1; cell++ {
+			if line <= mark && db[line][cell].occupied{
+				db[line] = destination[line-1]
 			}
 		}
 	}
