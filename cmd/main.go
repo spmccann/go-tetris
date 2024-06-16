@@ -5,9 +5,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"slices"
-	"strings"
 	"time"
-
 	"github.com/eiannone/keyboard"
 )
 
@@ -16,7 +14,6 @@ var runGame bool = true
 var blockPos int = rand.IntN(3)
 
 func main() {
-
 	tetrominos := tetrominos()
 	db := board(26, 12, tetrominos)
 	logo()
@@ -45,113 +42,7 @@ func main() {
 	}
 }
 
-func keyboardChannel() chan keyboard.Key {
-	keyPresses := make(chan keyboard.Key)
-	go func() {
-		defer close(keyPresses)
-		for {
-			_, key, err := keyboard.GetSingleKey()
-			if err != nil {
-				fmt.Println("Error reading key:", err)
-				return
-			}
-			keyPresses <- key
-		}
-	}()
-	return keyPresses
-}
-
-func readKeyboard(keyPresses chan keyboard.Key, db [][]*cell, piece tetromino, dest [][]int) {
-	// Check for key press (non-blocking)
-	select {
-	case key := <-keyPresses:
-		if key == keyboard.KeyEsc {
-			fmt.Println("quitting game...")
-			os.Exit(0)
-		} else if key == keyboard.KeyArrowLeft {
-			insertBlock(dest, piece, db, 0, -1)
-		} else if key == keyboard.KeyArrowRight {
-			insertBlock(dest, piece, db, 0, 1)
-		} else if key == keyboard.KeyArrowUp {
-			newDest := rotateBlock(dest, piece)
-			insertBlock(newDest, piece, db, 0, 0)
-		} else if key == keyboard.KeySpace {
-			newDest := hardDrop(dest, db)
-			insertBlock(newDest, piece, db, 0, 0)
-		} else {
-			insertBlock(dest, piece, db, 0, 0)
-		}
-	default:
-		insertBlock(dest, piece, db, 0, 0)
-		// No key pressed, continue with game loop
-	}
-}
-
-func startGame() {
-	_, _, err := keyboard.GetSingleKey()
-	if err != nil {
-		panic(err)
-	}
-}
-
-var orientations = map[string][][][]int{
-	"I": {
-		{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-		{{0, 1}, {1, 1}, {2, 1}, {3, 1}},
-		{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-		{{0, 1}, {1, 1}, {2, 1}, {3, 1}},
-	},
-	"O": {
-		{{0, 0}, {0, 1}, {1, 0}, {1, 1}},
-		{{0, 0}, {0, 1}, {1, 0}, {1, 1}},
-		{{0, 0}, {0, 1}, {1, 0}, {1, 1}},
-		{{0, 0}, {0, 1}, {1, 0}, {1, 1}},
-	},
-	"T": {
-		{{0, 1}, {1, 0}, {1, 1}, {1, 2}},
-		{{0, 1}, {1, 1}, {1, 2}, {2, 1}},
-		{{0, 0}, {0, 1}, {0, 2}, {1, 1}},
-		{{0, 1}, {1, 0}, {1, 1}, {2, 1}},
-	},
-	"S": {
-		{{0, 1}, {0, 2}, {1, 0}, {1, 1}},
-		{{0, 0}, {1, 0}, {1, 1}, {2, 1}},
-		{{0, 1}, {0, 2}, {1, 0}, {1, 1}},
-		{{0, 0}, {1, 0}, {1, 1}, {2, 1}},
-	},
-	"Z": {
-		{{0, 0}, {0, 1}, {1, 1}, {1, 2}},
-		{{0, 1}, {1, 0}, {1, 1}, {2, 0}},
-		{{0, 0}, {0, 1}, {1, 1}, {1, 2}},
-		{{0, 1}, {1, 0}, {1, 1}, {2, 0}},
-	},
-	"J": {
-		{{0, 0}, {1, 0}, {1, 1}, {1, 2}},
-		{{0, 0}, {0, 1}, {1, 0}, {2, 0}},
-		{{0, 0}, {0, 1}, {0, 2}, {1, 2}},
-		{{0, 1}, {1, 1}, {2, 0}, {2, 1}},
-	},
-	"L": {
-		{{0, 2}, {1, 0}, {1, 1}, {1, 2}},
-		{{0, 0}, {1, 0}, {2, 0}, {2, 1}},
-		{{0, 0}, {0, 1}, {0, 2}, {1, 0}},
-		{{0, 0}, {0, 1}, {1, 1}, {2, 1}},
-	},
-}
-
-func tetrominos() []*tetromino {
-	tetrominos := []*tetromino{
-		newTetromino("I", "🟦", orientations["I"], "⬜", "  "),
-		newTetromino("T", "🟪", orientations["T"], "⬜", "  "),
-		newTetromino("Z", "🟥", orientations["Z"], "⬜", "  "),
-		newTetromino("S", "🟩", orientations["S"], "⬜", "  "),
-		newTetromino("O", "🟨", orientations["O"], "⬜", "  "),
-		newTetromino("J", "🟫", orientations["J"], "⬜", "  "),
-		newTetromino("L", "🟧", orientations["L"], "⬜", "  "),
-		newTetromino("Background", "⬛", nil, "⬜", "  "),
-	}
-	return tetrominos
-}
+// need function for bringing key presses to game flow page instead of inputs
 
 func dropTetromino(piece tetromino, db [][]*cell, start_x int, start_y int) {
 	var pos int
@@ -179,8 +70,8 @@ func findActives(db [][]*cell) [][]int {
 }
 
 func tetrominoPlaced(db [][]*cell, actives [][]int, piece tetromino, _ int, keyPresses chan keyboard.Key) {
+	completedLines(db)
 	dest := nextLocations(actives)
-	completedLines(db, piece)
 	//dest = dest[len(dest)-4:]
 	if isGameOver(dest, db) {
 		fmt.Println("Game Over")
@@ -270,27 +161,39 @@ func rotateBlock(dest [][]int, piece tetromino) [][]int {
 	var rotPointX int
 	var rotPointY int
 	var newDest [][]int
-	avoidOBX := 0
-	avoidOBY := 0
-	for i := range originalCoords[0] {
+	for i := range originalCoords[blockPos] {
 		x := dest[i][0]
 		y := dest[i][1]
 		if i == 0 {
 			rotPointX = x
 			rotPointY = y
 		}
-		if y > 11 {
-			avoidOBY = 1
-		}
-		if x > 25 {
-			avoidOBX = 1
-		}
-		newDest = append(newDest, []int{rotPointX + originalCoords[blockPos][i][0] - avoidOBX, rotPointY + originalCoords[blockPos][i][1] - avoidOBY})
+		newDest = append(newDest, []int{rotPointX + originalCoords[blockPos][i][0] -1, rotPointY + originalCoords[blockPos][i][1]})	
 	}
+	newDest = backInBounds(newDest)
 	if blockPos < 3 {
 		blockPos += 1
 	} else {
 		blockPos = 0
+	}
+	return newDest
+}
+
+func backInBounds(newDest [][]int) [][]int{
+	fmt.Println(newDest)
+	var amountRight int
+	var amountBottom int
+	for i := range(newDest) {
+		if newDest[i][0] - 24 > amountBottom {
+			amountBottom = newDest[i][0] - 24
+		}
+		if newDest[i][1] - 10 > amountRight {
+			amountRight = newDest[i][1] - 10
+		}
+	}
+	for j := range(newDest) {
+		newDest[j][0] -= amountBottom
+		newDest[j][1] -= amountRight
 	}
 	return newDest
 }
@@ -310,7 +213,8 @@ func hardDrop(dest [][]int, db [][]*cell) [][]int {
 	for rows := rowMax; rows < len(db)-1; rows++ {
 		for cells := colMin; cells <= colMax; cells++ {
 			if db[rows][cells].occupied {
-				if db[rows][cells].location[0] < floor {
+				if db[rows][cells].location[0] <= floor {
+					fmt.Println(floor)
 					floor = db[rows][cells].location[0] - 1
 				}
 			}
@@ -322,7 +226,7 @@ func hardDrop(dest [][]int, db [][]*cell) [][]int {
 	return newDest
 }
 
-func completedLines(db [][]*cell, piece tetromino) {
+func completedLines(db [][]*cell) {
 	var total int
 	for line := range db {
 		for cell := range db[line] {
@@ -335,7 +239,6 @@ func completedLines(db [][]*cell, piece tetromino) {
 		}
 		total = 0
 	}
-
 }
 
 func moveBlocksDown(db [][]*cell, mark int) {
@@ -359,99 +262,4 @@ func isGameOver(dest [][]int, db [][]*cell) bool {
 		}
 	}
 	return false
-}
-
-type tetromino struct {
-	name      string
-	block     string
-	coords    [][][]int
-	reset     string
-	invisible string
-}
-
-func newTetromino(name string, block string, coords [][][]int, reset string, invisible string) *tetromino {
-	t := tetromino{name: name}
-	t.block = block
-	t.coords = coords
-	t.reset = reset
-	t.invisible = invisible
-	return &t
-}
-
-type cell struct {
-	location []int
-	occupied bool
-	active   bool
-	block    string
-}
-
-func newCell(location []int, occupied bool, active bool, block string) *cell {
-	c := cell{location: location}
-	c.occupied = occupied
-	c.active = active
-	c.block = block
-	return &c
-}
-
-func board(height int, width int, tetrominos []*tetromino) [][]*cell {
-	var grid [][]*cell
-	var row []*cell
-
-	for f := 0; f <= height; f++ {
-		// top and bottom border
-		if f == 0 || f == 1 || f == 2 || f == 3 {
-			for i := 0; i < width; i++ {
-				if i == width-1 {
-					row = append(row, newCell([]int{f, i}, false, false, tetrominos[7].block+"\n"))
-				} else {
-					row = append(row, newCell([]int{f, i}, false, false, tetrominos[7].block))
-				}
-			}
-			grid = append(grid, row)
-			row = nil
-		} else if f == 4 || f == height {
-			for i := 0; i < width; i++ {
-				row = append(row, newCell([]int{f, i}, false, false, tetrominos[7].block))
-			}
-			grid = append(grid, row)
-			row = nil
-		} else {
-			// middle cells
-			for j := 0; j < width; j++ {
-				if j == 0 || j == width-1 {
-					row = append(row, newCell([]int{f, j}, true, false, tetrominos[7].block))
-				} else {
-					row = append(row, newCell([]int{f, j}, false, false, tetrominos[7].reset))
-				}
-			}
-			grid = append(grid, row)
-			row = nil
-		}
-	}
-	return grid
-}
-
-func printBoard(board [][]*cell) string {
-	var sb strings.Builder
-	padding := "   "
-	for j := 4; j < len(board); j++ {
-		sb.WriteString(padding)
-		for i := 0; i < len(board[j]); i++ {
-			sb.WriteString(board[j][i].block)
-		}
-		sb.WriteString("\n")
-	}
-	return sb.String()
-}
-
-func logo() {
-	fmt.Print(`
-  _______   _        _     
- |__   __| | |      (_)    
-    | | ___| |_ _ __ _ ___ 
-    | |/ _ \ __| '__| / __|
-    | |  __/ |_| |  | \__ \
-    |_|\___|\__|_|  |_|___/
-                                         
-`)
 }
