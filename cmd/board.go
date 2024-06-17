@@ -26,17 +26,7 @@ func board(height int, width int, tetrominos []*tetromino) [][]*cell {
 
 	for f := 0; f <= height; f++ {
 		// top and bottom border
-		if f == 0 || f == 1 || f == 2 || f == 3 {
-			for i := 0; i < width; i++ {
-				if i == width-1 {
-					row = append(row, newCell([]int{f, i}, false, false, tetrominos[7].block+"\n"))
-				} else {
-					row = append(row, newCell([]int{f, i}, false, false, tetrominos[7].block))
-				}
-			}
-			grid = append(grid, row)
-			row = nil
-		} else if f == 4 || f == height {
+		if f == 0 || f == height {
 			for i := 0; i < width; i++ {
 				row = append(row, newCell([]int{f, i}, false, false, tetrominos[7].block))
 			}
@@ -61,7 +51,7 @@ func board(height int, width int, tetrominos []*tetromino) [][]*cell {
 func printBoard(board [][]*cell) string {
 	var sb strings.Builder
 	padding := "   "
-	for j := 4; j < len(board); j++ {
+	for j := 0; j < len(board); j++ {
 		sb.WriteString(padding)
 		for i := 0; i < len(board[j]); i++ {
 			sb.WriteString(board[j][i].block)

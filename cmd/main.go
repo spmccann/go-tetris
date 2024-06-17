@@ -10,12 +10,11 @@ import (
 )
 
 var needBlock bool = false
-var runGame bool = true
 var blockPos int = rand.IntN(3)
 
 func main() {
 	tetrominos := tetrominos()
-	db := board(26, 12, tetrominos)
+	db := board(22, 12, tetrominos)
 	logo()
 	fmt.Println(printBoard((db)))
 	fmt.Println("   Press Any Key to Play")
@@ -24,11 +23,11 @@ func main() {
 	randomBlock := rand.IntN(7)
 	newGame := true
 
-	for runGame {
+	for {
 		newRandomNumber := rand.IntN(7)
 		if newGame || needBlock {
 			randomBlock = newRandomNumber
-			dropTetromino(*tetrominos[randomBlock], db, 5, 6)
+			dropTetromino(*tetrominos[randomBlock], db, 1, 6)
 			newGame = false
 			needBlock = false
 		} else {
@@ -42,7 +41,24 @@ func main() {
 	}
 }
 
-// need function for bringing key presses to game flow page instead of inputs
+func routeKeyPress(keyInput string, piece tetromino, db [][]*cell, dest [][]int) {
+	if keyInput == "esc" {
+		fmt.Println("quitting game...")
+		os.Exit(0)
+	} else if keyInput == "left" {
+		insertBlock(dest, piece, db, 0, -1)
+	} else if keyInput == "right" {
+		insertBlock(dest, piece, db, 0, 1)
+	} else if keyInput == "up" {
+		newDest := rotateBlock(dest, piece)
+    insertBlock(newDest, piece, db, 0, 0)
+	} else if keyInput == "space" {
+		newDest := hardDrop(dest, db)
+		insertBlock(newDest, piece, db, 0, 0)
+	} else {
+		insertBlock(dest, piece, db, 0, 0)
+	}
+}
 
 func dropTetromino(piece tetromino, db [][]*cell, start_x int, start_y int) {
 	var pos int
@@ -83,7 +99,7 @@ func tetrominoPlaced(db [][]*cell, actives [][]int, piece tetromino, _ int, keyP
 		needBlock = true
 	} else {
 		setInactive(db, piece, actives)
-		readKeyboard(keyPresses, db, piece, dest)
+		readKeyboard(keyPresses, piece, db, dest)
 	}
 }
 
@@ -97,7 +113,7 @@ func isOccupancy(db [][]*cell, dest [][]int) bool {
 }
 
 func isFloor(dest [][]int) bool {
-	floor := 26
+	floor := 22
 	var rows []int
 	for block := 0; block < len(dest); block++ {
 		rows = append(rows, dest[block][0])
@@ -184,8 +200,8 @@ func backInBounds(newDest [][]int) [][]int{
 	var amountRight int
 	var amountBottom int
 	for i := range(newDest) {
-		if newDest[i][0] - 24 > amountBottom {
-			amountBottom = newDest[i][0] - 24
+		if newDest[i][0] - 21 > amountBottom {
+			amountBottom = newDest[i][0] - 21
 		}
 		if newDest[i][1] - 10 > amountRight {
 			amountRight = newDest[i][1] - 10
@@ -202,7 +218,7 @@ func hardDrop(dest [][]int, db [][]*cell) [][]int {
 	var newDest [][]int
 	var rows []int
 	var columns []int
-	floor := 25
+	floor := 21
 	for block := 0; block < len(dest); block++ {
 		rows = append(rows, dest[block][0])
 		columns = append(columns, dest[block][1])
@@ -244,7 +260,7 @@ func completedLines(db [][]*cell) {
 func moveBlocksDown(db [][]*cell, mark int) {
 	source := db
 	destination := make([][]*cell, len(source))
-	copy(destination, source)
+	copy(destination, source) // make a full copy of board to reference
 
 	for line := 6; line < len(db)-1; line++ {
 		for cell := 1; cell < len(db[line])-1; cell++ {
