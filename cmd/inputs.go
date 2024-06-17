@@ -35,7 +35,9 @@ func readKeyboard(keyPresses chan keyboard.Key, piece tetromino, db [][]*cell, d
 			routeKeyPress("up", piece, db, dest)
 		} else if key == keyboard.KeySpace {
 			routeKeyPress("space", piece, db, dest)
-		} 
+		} else {
+			routeKeyPress("", piece, db, dest)
+		}
 	default:
 		routeKeyPress("", piece, db, dest)
 		// No key pressed, continue with game loop
