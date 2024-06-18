@@ -60,7 +60,6 @@ func nextLocations(actives [][]int) [][]int {
 }
 
 func tetrominoPlaced(db [][]*cell, actives [][]int, piece tetromino, _ int, keyPresses chan keyboard.Key) {
-	completedLines(db)
 	dest := nextLocations(actives)
 	checkGameOver(dest, db)
 	if isFloor(dest) || isOccupancy(db, dest) {
@@ -68,6 +67,7 @@ func tetrominoPlaced(db [][]*cell, actives [][]int, piece tetromino, _ int, keyP
 		setInactive(db, piece, actives)
 		needBlock = true
 	} else {
+		completedLines(db)
 		setInactive(db, piece, actives)
 		readKeyboard(keyPresses, piece, db, dest)
 	}
@@ -202,31 +202,34 @@ func hardDrop(dest [][]int, db [][]*cell) [][]int {
 }
 
 func completedLines(db [][]*cell) {
-	var total int
-	for line := range db {
-		for cell := range db[line] {
-			if db[line][cell].occupied {
-				total += 1
-			}
+	for line := len(db) - 2; line > 0; line-- { 
+		if isLineComplete(db[line]) {
+			moveBlocksDown(db, line)
+			line++ 
 		}
-		if total == 12 {
-			moveBlocksDown(db, line) 
-		}
-		total = 0
 	}
 }
 
-func moveBlocksDown(db [][]*cell, mark int) {
-	source := db
-	destination := make([][]*cell, len(source))
-	copy(destination, source) // make a full copy of board to reference
-
-	for line := 2; line < len(db)-1; line++ {
-		for cell := 1; cell < len(db[line])-1; cell++ {
-			if line <= mark {
-				db[line][cell] = destination[line-1][cell]
-			}
+func isLineComplete(line []*cell) bool {
+	for _, c := range line {
+		if !c.occupied {
+			return false
 		}
+	}
+	return true
+}
+
+func moveBlocksDown(db [][]*cell, mark int) {
+	for line := mark; line > 2; line-- { 
+		for cell := 1; cell < len(db[line])-1; cell++ {
+			db[line][cell].occupied = db[line-1][cell].occupied
+			db[line][cell].block = db[line-1][cell].block
+		}
+	}
+
+	for cell := 1; cell < len(db[1])-1; cell++ {
+		db[1][cell].occupied = false
+		db[1][cell].block = "⬛"
 	}
 }
 

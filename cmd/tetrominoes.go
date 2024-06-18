@@ -5,15 +5,13 @@ type tetromino struct {
 	block     string
 	coords    [][][]int
 	reset     string
-	invisible string
 }
 
-func newTetromino(name string, block string, coords [][][]int, reset string, invisible string) *tetromino {
+func newTetromino(name string, block string, coords [][][]int, reset string) *tetromino {
 	t := tetromino{name: name}
 	t.block = block
 	t.coords = coords
 	t.reset = reset
-	t.invisible = invisible
 	return &t
 }
 
@@ -64,14 +62,14 @@ var orientations = map[string][][][]int{
 
 func tetrominos() []*tetromino {
 	tetrominos := []*tetromino{
-		newTetromino("I", "🟦", orientations["I"], "⬜", "  "),
-		newTetromino("T", "🟪", orientations["T"], "⬜", "  "),
-		newTetromino("Z", "🟥", orientations["Z"], "⬜", "  "),
-		newTetromino("S", "🟩", orientations["S"], "⬜", "  "),
-		newTetromino("O", "🟨", orientations["O"], "⬜", "  "),
-		newTetromino("J", "🟫", orientations["J"], "⬜", "  "),
-		newTetromino("L", "🟧", orientations["L"], "⬜", "  "),
-		newTetromino("Background", "⬛", nil, "⬜", "  "),
+		newTetromino("I", "🟦", orientations["I"], "⬛"),
+		newTetromino("T", "🟪", orientations["T"], "⬛"),
+		newTetromino("Z", "🟥", orientations["Z"], "⬛"),
+		newTetromino("S", "🟩", orientations["S"], "⬛"),
+		newTetromino("O", "🟨", orientations["O"], "⬛"),
+		newTetromino("J", "🟫", orientations["J"], "⬛"),
+		newTetromino("L", "🟧", orientations["L"], "⬛"),
+		newTetromino("Background", "🔳", nil, "⬛"),
 	}
 	return tetrominos
 }
